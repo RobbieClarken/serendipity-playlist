@@ -67,7 +67,7 @@ def find_by_key_value(dicts, key, value, default=None):
 
     """ Find the first dict object in a list where obj[key] = value. """
 
-    return next((d for d in dicts if d[key] == value), default)
+    return next((d for d in dicts if key in d and d[key] == value), default)
 
 
 if __name__ == '__main__':

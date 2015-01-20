@@ -21,20 +21,29 @@ def get_serendipity_tracks():
     return [t.split('\t')[0] for t in requests.get(url).json()]
 
 
+def response_generator(response):
+
+    """
+    Keep yielding responses to a Spotify query until there are no more.
+    """
+
+    yield response
+    while response['next']:
+        response = sp.next(response)
+        yield response
+
+
 def get_playlist_id(sp, username, playlist_name):
 
     """
     Find a Spotify user's playlist by name. If it doesn't exist, create it.
     """
 
-    response = sp.user_playlists(username)
-    playlist = find_by_key_value(response['items'], 'name', playlist_name)
-
-    while playlist is None and response['next']:
-        response = sp.next(response)
+    for response in response_generator(sp.user_playlists(username)):
         playlist = find_by_key_value(response['items'], 'name', playlist_name)
-
-    if not playlist:
+        if playlist:
+            break
+    else:
         playlist = sp.user_playlist_create(username, playlist_name)
 
     return playlist['id']
@@ -44,11 +53,11 @@ def get_playlist_track_ids(sp, username, playlist_id):
 
     """ Get the track id of every song on a playlist. """
 
-    response = sp.user_playlist_tracks(username, playlist_id,
-                                       fields='next,items')
-    track_ids = [item['track']['id'] for item in response['items']]
-    while response['next']:
-        response = sp.next(response)
+    playlist_responses = response_generator(
+        sp.user_playlist_tracks(username, playlist_id, fields='next,items')
+    )
+    track_ids = []
+    for response in playlist_responses:
         track_ids += [item['track']['id'] for item in response['items']]
 
     return track_ids
